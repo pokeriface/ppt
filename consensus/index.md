@@ -107,16 +107,28 @@ date: 2017年3月25日
 * 整体流程
  * 选举出一个leader，如果有过半的server投票给该server，则当选为leader。
  * client发送信息到leader，由leader单向的向所有server同步log，过半的commit该条log。然后无限重试同步给其他的server。
-* 模块的划分
- * leader选举。对应于RequestVote RPC。
- * 日志同步。对应于AppendEntries RPC。
+* 一些关键词
+ * term号以及current term。
+ * log以及log index。
+ * commit index。
+ * AppendEntriesRPC和RequestsVoteRPC。
 * server角色的划分
 ![Alt text](/img/server_roles.png)
 
 [slide]
 ###Leader选举
 * 总体上使用心跳来触发选举。
-* 
+* 初始化状态为所有server都是follower，当超过自定义的选举时间，则该server会从follower状态变成condidat。自增本地current term，并发起RequestsVoteRPC。
+* 上述动作会产生三种结果。
+ * 赢得了选举，当选leader。向所有server告知当选leader。
+ * 收到了其他的RequestsVoteRPC，如果收到的current term大于等于自己的，则退化为follower，否则拒绝并继续选举。
+ * 没有server赢得多数派，超时重试。
+
+[slide]
+####如何避免投票分裂
+* 基于随机时间退避的算法。
+* 基于优先级的算法。
+
 
 [slide]
 ### 总结
