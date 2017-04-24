@@ -20,7 +20,7 @@ date: 2017年3月25日
 [slide]
 ## 一、 一致性简介
 ------
-* 数据库事务的一致性：事务的执行必须是从一个一致性状态进入到另一个一致性状态。例如转账。 {:&.moveIn}
+* 数据库事务的一致性：事务的执行必须是从一个一致性状态进入到另一个一致性状态。例如触发器级联等约束。 {:&.moveIn}
 * 分布式系统的一致性：指数据在多个副本之间是否能够保持一致的特性。也即数据在一致性状态更新后，仍然处于一致性的状态。
 
 [slide]
@@ -84,7 +84,7 @@ date: 2017年3月25日
 -----
 ![Alt text](/img/leslie.jpg "Optional title")
 
-1. 问题的阐述
+1. 问题的阐述 {:&.moveIn}
 2. Paxos协议的推导
 3. 完整的Paxos协议
 4. 总结
@@ -92,7 +92,7 @@ date: 2017年3月25日
 [slide]
 ### 问题的阐述
 * 一个变量value，分布在N个进程中。每个进程都尝试修改自身value的值，它们企图各不相同，但最终所有的进程会对value的某个值达成一致。
-* 一致性算法的要求。
+* 前提只有一个，不存在拜占庭将军的问题。一致性算法的要求。
  * value达成一致的值必须是某个进程提出的。
  * 一旦value达成了一致，那么value必须不能被更改。也叫安全性。
  * 总能达成一致，不能无休止的进行。也称活性。
@@ -100,21 +100,26 @@ date: 2017年3月25日
 
 [slide]
 ### Paxos协议的推导
-* 达成一致的条件：基于多数派的协议，过半原则。在Paxos中，这个多数派的投票集合叫做法定集合，只要确保了集合中每个元素只投一次票，则保证了不会达成两个结果。
+* 达成一致的条件：基于多数派的协议，过半原则。在Paxos中，这个多数派的投票集合叫做法定集合，只要确保了集合中每个元素只投一次票，则保证了不会达成两个结果。 {:&.moveIn}
 * 不同的成员负责提出提案，基于先到先得，每人投票一次，进行投票。？？
  * 有了提案号（proposer_id），能够对提案号做出区分，接收提案号更大的提案。问题得到部分解决。
-* 仍然存在的问题，无法预知未来会不会有更大的提案号过来，还是没办法保证活性。
- * 让投票者能够拒绝提案号更大的提案？不可行
- * 让投票者能够拒绝提案号更小的提案？分裂成两个阶段是一个思路。
- * 限制后收到的提案，使其提案的内容与前者相同？！
+
+![Alt text](/img/split_vote.jpg "Optional title")
+
 [slide]
 ### Paxos协议的推导
-* 总结一下，目前在功能上做区分，可以划分为两种角色。Proposer和Acceptor。
-* 目前划分为两种阶段，Prepare阶段和Accept阶段。
- * Prepare阶段：提议者Proposer向所有Acceptor广播预提案，需带上这次的提案号proposer_id。接受者Acceptor收到消息，更新本地的current_max_proposer_id = MAX(current_max_proposer_id, proposer_id)，承诺Proposer不答应比current_max_proposer_id小的提案。
- * Accept阶段：提议者Proposer正式广播自己的提案，与之前的proposer_id相同。接受者Acceptor收到消息，再次更新current_max_proposer_id，并决定是否给这个Proposer投票。
-* 假设某次提案只有PA参与，提案信息(proposerid_a, valuea)PA显然过半选片当选，这时PB拥有更大的proposer_id，显然PB当选，这时就导致了value在整个选举中的不一致。
+* 仍然存在的问题，无法预知未来会不会有更大的提案号过来，还是没办法保证活性。
+ * 让投票者能够拒绝提案号更大的提案？不可行。 {:&.moveIn}
+ * 让投票者能够拒绝提案号更小的提案？分裂成两个阶段是一个思路。第一阶段用于收集信息，并投票人作出承诺。第二阶段选举人得知自己过半了的话，则宣布当选。
+ * 限制后收到的提案，使其提案的内容与前者相同？！
 
+[slide]
+### Paxos协议的推导
+* 总结一下，目前在功能上做区分，可以划分为两种角色。Proposer和Acceptor。 {:&.moveIn}
+* 目前划分为两种阶段，Prepare阶段和Accept阶段。
+ * Prepare阶段：提议者Proposer向所有Acceptor广播预提案，需带上这次的提案号proposer_id。接受者Acceptor收到消息，更新本地的current_max_proposer_id = MAX(current_max_proposer_id, proposer_id)，承诺Proposer不答应比current_max_proposer_id小的提案。 {:&.moveIn}
+ * Accept阶段：提议者Proposer正式广播自己的提案，与之前的proposer_id相同。接受者Acceptor收到消息，再次更新current_max_proposer_id，并决定是否给这个Proposer投票。
+* 仍然存在问题！假设某次提案只有PA参与，提案信息(proposerid_a, valuea)PA显然过半选片当选，这时PB拥有更大的proposer_id，显然PB当选，这时就导致了value在整个选举中的不一致。
 
 [slide]
 ### 需要一个什么策略？
@@ -127,11 +132,11 @@ date: 2017年3月25日
 [slide]
 ### 完整的Paxos协议
 -----
-_Prepare阶段_
+**Prepare阶段**
 * Proposer节点生成新的提案编号pid，然后向某个Accept集合成员发送Prepare请求。 {:&.moveIn}
 * Acceptor节点可能在任意时刻收到Prepare请求。如果收到的P大于Acceptor已经收到过的提案编号max_id，则更新自己的最新提案编号max_id，然后回应Proposer承诺不再批准任何小于max_id的提案。反之，则不回应。
 
-_Accept阶段_
+**Accept阶段**
 
 * Proposer节点收到过半的Acceptor承诺，则产生新的提案(pid, value_n)。其中value_n为所有在prepare阶段收到的响应中提案编号最大的提案编号所对应的value，如果半数以上都没有批准任何提案，则说明半数Acceptor批准的都是自己的value，则value_n可以是任意值。 {:&.moveIn}
 * 不违背Acceptor的现有承诺下，相应任意Accept请求。
@@ -145,7 +150,7 @@ _Accept阶段_
 
 [slide]
 ## 三、Raft 一致性算法
-1. Raft概述
+1. Raft概述 {:&.moveIn}
 2. Raft算法基础
 3. leader选举
 4. 日志同步
@@ -177,8 +182,21 @@ _Accept阶段_
 ![Alt text](/img/server_roles.png)
 
 [slide]
+### Raft算法基础
+-----------
+|特性|描述|
+|---- |--------------------:|
+|选举安全原则|一个任期最多选出一个leader|
+|领导人只增加原则|领导人不会删除覆盖自己的日志|
+|日志匹配原则|如果日志有相同日志号，且对应的term相同，则认为从头到此的日志完全相同|
+|领导人完全原则|如果日志在一个任期内被提交，则一定会出现在任期更大的领导人中|
+|状态机安全原则|如果某条日志应用到了状态机中，则其他服务器不会在该位置应用其他日志|
+* Raft在任意时刻保证这些原则都成立。
+* 保证了这些原则的成立，也就变相的保证了一致性算法的安全性。
+
+[slide]
 ###Leader选举
-* 总体上使用心跳来触发选举。
+* 总体上使用心跳来触发选举。 {:&.moveIn}
 * 初始化状态为所有server都是follower，当超过自定义的选举时间，则该server会从follower状态变成condidat。自增本地current term，并发起RequestsVoteRPC，号召大家给自己投票。
 * 接收到candidate发起的RequestsVoteRPC时，server做以下逻辑的判断。
  * 如果接收到的term号小于自己的current term号，则返回false。
@@ -189,15 +207,15 @@ _Accept阶段_
  * 没有server赢得多数派，超时重试。
 
 [slide]
-#### 如何避免投票分裂
-* 基于随机时间退避的算法。随机的选举超时时间，保证只有一个server会率先超时，保证选票集中。
+**如何避免投票分裂**
 * 基于优先级的算法。
+* 基于随机时间退避的算法。随机的选举超时时间，保证只有一个server会率先超时，保证选票集中。 {:&.moveIn}
 
 [slide]
 ### 日志同步
 * 只支持单向的日志流，由leader向所有server同步。过半则commit。
 * 当server接收到AppendEntriesRPC时，要做以及逻辑判断。
- * 如果 term < currentTerm返回 false。
+ * 如果 term < currentTerm，返回 false。
  * 如果在prevLogIndex处的日志的任期号与prevLogTerm不匹配时，返回 false。
  * 如果一条已经存在的日志与新的冲突（index 相同但是任期号 term 不同），则删除已经存在的日志和它之后所有的日志。
  * 添加任何在已有的日志中不存在的条目。
