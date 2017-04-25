@@ -84,6 +84,7 @@ date: 2017年3月25日
 -----
 ![Alt text](/img/leslie.jpg "Optional title")
 
+
 1. 问题的阐述 {:&.moveIn}
 2. Paxos协议的推导
 3. 完整的Paxos协议
@@ -195,6 +196,12 @@ date: 2017年3月25日
 * 保证了这些原则的成立，也就变相的保证了一致性算法的安全性。
 
 [slide]
+### Raft算法基础
+![Alt text](/img/replicate_machine.png)
+
+复制状态机
+
+[slide]
 ###Leader选举
 * 总体上使用心跳来触发选举。 {:&.moveIn}
 * 初始化状态为所有server都是follower，当超过自定义的选举时间，则该server会从follower状态变成condidat。自增本地current term，并发起RequestsVoteRPC，号召大家给自己投票。
@@ -224,6 +231,11 @@ date: 2017年3月25日
 [slide]
 ### 正确性
 * 虽然被划分为两个模块，但相互作用保证正确性。利用日志的连续性，保证选举出来的leader必然拥有全部的日志。
+* 领导人完全原则的证明。假设存在leader T任期，U是T接下来的一个任期，且与T所对应的leader不同，推出与我们的已知矛盾。
+ * 前提：leader U不存在某条已提交的日志。
+ * leader U被过半选出来，而这条日志已提交，同样已被过半的follower同意。则必定有一台follower同时满足给U投票，且拥有这条已提交的日志。这台follower是推出矛盾的关键。
+ * 该投票者必定是在接收日志之前给U投票的。否则之前的日志
+ * 
 
 [slide]
 ### 与客户端的交互
